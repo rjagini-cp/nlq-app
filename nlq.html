@@ -462,42 +462,6 @@
   <div class="sb-section">Dashboard</div>
   <nav><ul>
     <li><a href="https://restor3dindia.netlify.app/"><i class="fa fa-home"></i>Dashboard</a></li>
-    <li><a href="data-genie.html" class="active"><i class="fa fa-bolt"></i>Data Genie</a></li>
-    <li><div class="sb-item" onclick="toggleSub(this)"><i class="fa fa-chart-pie icon"></i>Overview<i class="fa fa-chevron-down sb-arrow"></i></div>
-      <ul class="sb-sub">
-        <li><a href="https://restor3dindia.netlify.app/overview-team-metrics">Daily Utilization</a></li>
-        <li><a href="https://restor3dindia.netlify.app/overview-graphs">Team Metrics</a></li>
-        <li><a href="https://restor3dindia.netlify.app/overview-process-metrics">Process Metrics</a></li>
-        <li><a href="https://restor3dindia.netlify.app/last-day-targets">Last Day Targets</a></li>
-        <li><a href="https://restor3dindia.netlify.app/bq-metrics">BigQuery</a></li>
-      </ul></li>
-    <li><a href="https://restor3dindia.netlify.app/metrics"><i class="fa fa-chart-bar"></i>My Metrics</a></li>
-    <li><a href="https://restor3dindia.netlify.app/assignments"><i class="fa fa-tasks"></i>Assignment</a></li>
-  </ul></nav>
-  <div class="sb-section">Applications</div>
-  <nav><ul>
-    <li><a href="https://outlook.office.com/" target="_blank"><i class="fa fa-envelope"></i>Email</a></li>
-    <li><a href="https://teams.cloud.microsoft/" target="_blank"><i class="fa fa-comments"></i>Teams</a></li>
-    <li><a href="https://restor3dindia.netlify.app/todo"><i class="fa fa-check-square"></i>Todo</a></li>
-    <li><div class="sb-item" onclick="toggleSub(this)"><i class="fa fa-link icon"></i>Links<i class="fa fa-chevron-down sb-arrow"></i></div>
-      <ul class="sb-sub">
-        <li><a href="https://restor3dindia.netlify.app/trainings">Trainings</a></li>
-        <li><a href="https://restor3dindia.netlify.app/dashboards">Dashboards</a></li>
-        <li><a href="https://restor3dindia.netlify.app/instructions">Work Instructions</a></li>
-        <li><a href="https://restor3dindia.netlify.app/design-times">Design Times</a></li>
-        <li><a href="https://restor3dindia.netlify.app/overtime">Overtime</a></li>
-        <li><a href="https://restor3dindia.netlify.app/holidays">Holidays</a></li>
-        <li><a href="https://restor3dindia.netlify.app/leaves">Leaves</a></li>
-      </ul></li>
-    <li><div class="sb-item" onclick="toggleSub(this)"><i class="fa fa-users icon"></i>HR Management<i class="fa fa-chevron-down sb-arrow"></i></div>
-      <ul class="sb-sub">
-        <li><a href="https://restor3dindia.netlify.app/hiring">Hiring Process</a></li>
-        <li><a href="https://restor3dindia.netlify.app/forecast">Forecast</a></li>
-        <li><a href="https://restor3dindia.netlify.app/current-staff">Current Staff</a></li>
-      </ul></li>
-    <li><a href="https://restor3dindia.netlify.app/ncrs"><i class="fa fa-exclamation-triangle"></i>NCRs</a></li>
-    <li><a href="https://restor3dindia.netlify.app/skill-matrix"><i class="fa fa-th"></i>Skill Matrix</a></li>
-    <li><a href="https://restor3dindia.netlify.app/contacts"><i class="fa fa-address-book"></i>Contacts</a></li>
   </ul></nav>
   <div class="sb-collapse-btn" onclick="toggleSidebar()" title="Collapse sidebar">
     <i class="fa fa-chevron-left" id="sbCollapseIcon"></i>
@@ -543,7 +507,7 @@
           <input type="date" class="date-input" id="nlqDateTo"/>
         </div>
         <div class="filter-grid" style="margin-top:8px">
-          <div class="ms-wrap">
+          <div class="ms-wrap" style="display:none">
             <div class="ms-label">Product Group</div>
             <button class="ms-btn" onclick="toggleDD('nlqProductGroup')"><span class="ms-btn-text" id="lbl-nlqProductGroup">All Groups</span><span class="ms-btn-icons"><i class="fa fa-times ms-clear-x" id="clr-nlqProductGroup" onclick="clearDD('nlqProductGroup',event)"></i><i class="fa fa-chevron-down ms-chevron"></i></span></button>
             <div class="ms-dropdown" id="dd-nlqProductGroup"><div class="ms-search"><input placeholder="Search groups..." oninput="filterList('nlqProductGroup',this.value)"/></div><div class="ms-list" id="list-nlqProductGroup"></div><div class="ms-footer"><span class="ms-count" id="cnt-nlqProductGroup">0 selected</span><div class="ms-footer-btns"><button class="ms-clearall" onclick="clearDD('nlqProductGroup',event)">Clear</button><button class="ms-selectall" onclick="selectAll('nlqProductGroup')">All</button></div></div></div>
@@ -802,7 +766,7 @@ function setUserRole(role,btn){
 let dateFrom='',dateTo='',isAllTime=false;
 let allCases=[],filteredCases=[],currentPage=1,sortKey='alias',sortAsc=true,isOnHoldTable=false;
 const PAGE_SIZE=25;
-let queryChart=null,lastNlqRows=null,nlqAllRows=[],nlqFilteredRows=[],lastSQL='',currentNlqMetric='';
+let queryChart=null,lastNlqRows=null,nlqAllRows=[],nlqFilteredRows=[],lastSQL='',currentNlqMetric='',lastNlqInterpretedFilters=null;
 let nlqSortKey='value',nlqSortAsc=false,nlqPage=1;
 const NLQ_PAGE_SIZE=25;
 let avgDigitalLt=0;
@@ -2191,7 +2155,7 @@ function refreshProductList(){
   if(searchInput&&searchInput.value)filterList('productName',searchInput.value);
 }
 function buildStaticLists(){buildList('laterality',LAT_OPTS);buildList('flags',FLAG_OPTS);}
-function populateMonthPicker(){const sel=document.getElementById('monthPicker'),now=new Date();for(let i=0;i<18;i++){const d=new Date(now.getFullYear(),now.getMonth()-i,1);const y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,'0');sel.innerHTML+=`<option value="${y}-${m}">${d.toLocaleString('default',{month:'long',year:'numeric'})}</option>`;}}
+function populateMonthPicker(){const sel=document.getElementById('monthPicker'),nlqSel=document.getElementById('nlqMonthPicker'),now=new Date();for(let i=0;i<18;i++){const d=new Date(now.getFullYear(),now.getMonth()-i,1);const y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,'0');const opt=`<option value="${y}-${m}">${d.toLocaleString('default',{month:'long',year:'numeric'})}</option>`;if(sel)sel.innerHTML+=opt;if(nlqSel)nlqSel.innerHTML+=opt;}}
 function populateCsMonthPicker(){const sel=document.getElementById('cs-month-picker'),now=new Date();for(let i=0;i<18;i++){const d=new Date(now.getFullYear(),now.getMonth()-i,1);const y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,'0');sel.innerHTML+=`<option value="${y}-${m}">${d.toLocaleString('default',{month:'long',year:'numeric'})}</option>`;}}
 function applyCsMonthPicker(){
   const val=document.getElementById('cs-month-picker').value;if(!val)return;
@@ -2585,7 +2549,7 @@ function applyAllTableFilters(){
 }
 
 async function fetchAllCases(){const btn=document.getElementById('fetchBtn');btn.disabled=true;btn.innerHTML='<i class="fa fa-spinner fa-spin"></i> Fetching...';isOnHoldTable=false;showLoading('Fetching cases...');try{const res=await fetch(`${API}/analytics/cases?${buildQS()}`);const data=res.ok?await res.json():null;if(data?.cases)loadCasesIntoTable(data.cases,'All Cases',`${data.cases.length} cases - created in date range`,false);}catch(e){toast('Error','err');}finally{btn.disabled=false;btn.innerHTML='<i class="fa fa-search"></i> Fetch All Cases';hideLoading();}}
-async function fetchNlqCases(){if(!lastNlqRows?.length)return;const labels=lastNlqRows.map(r=>r.label).filter(Boolean);if(!labels.length)return;isOnHoldTable=false;showLoading('Fetching cases...');try{const res=await fetch(`${API}/analytics/cases?${buildQS({product:labels.join(',')})}`);const data=res.ok?await res.json():null;if(data?.cases)loadCasesIntoTable(data.cases,'NLQ Result Cases',`${data.count} cases`,false);}catch(e){toast('Error','err');}finally{hideLoading();}}
+async function fetchNlqCases(){if(!lastNlqRows?.length)return;const labels=lastNlqRows.map(r=>r.label).filter(Boolean);if(!labels.length)return;isOnHoldTable=false;showLoading('Fetching cases...');try{const f=lastNlqInterpretedFilters||{};const params=new URLSearchParams();params.append('product',labels.join(','));['case_type','step','step_user','laterality','regulatory','surgeon','facility','state','date_from','date_to'].forEach(k=>{if(f[k])params.append(k,f[k]);});if(f.use_created_at)params.append('use_created_at','true');const res=await fetch(`${API}/analytics/cases?${params.toString()}`);const data=res.ok?await res.json():null;if(data?.cases)loadCasesIntoTable(data.cases,'NLQ Result Cases',`${data.count} cases`,false);}catch(e){toast('Error','err');}finally{hideLoading();}}
 
 function notesCell(c){
   const notes=[];
@@ -2738,7 +2702,7 @@ function clearNlqConversation(){
   document.getElementById('fetchNlqBtn').classList.remove('show');
   document.getElementById('nlqPagination').style.display='none';
   document.getElementById('queryInput').value='';
-  lastNlqRows=null;nlqAllRows=[];nlqFilteredRows=[];currentNlqMetric='';
+  lastNlqRows=null;lastNlqInterpretedFilters=null;nlqAllRows=[];nlqFilteredRows=[];currentNlqMetric='';
   toast('Started a new conversation');
 }
 function setNlqMode(mode){
@@ -2777,7 +2741,7 @@ async function runLocalQuery(){
   rd.classList.add('show');rt.innerHTML='<i class="fa fa-spinner fa-spin" style="color:var(--accent-dark)"></i> Querying...';
   document.getElementById('queryResultMeta').textContent='';document.getElementById('queryChartWrap').style.display='none';
   document.getElementById('fetchNlqBtn').classList.remove('show');document.getElementById('nlqTableFilter').classList.remove('show');
-  document.getElementById('nlqPagination').style.display='none';lastNlqRows=null;nlqAllRows=[];nlqFilteredRows=[];currentNlqMetric='';
+  document.getElementById('nlqPagination').style.display='none';lastNlqRows=null;lastNlqInterpretedFilters=null;nlqAllRows=[];nlqFilteredRows=[];currentNlqMetric='';
 
   const i=localParseQ(q);
   if(!i.m){rl.textContent='Result';rt.innerHTML='<span style="color:var(--text-3)">Local mode only understands simple phrasings, e.g. "avg total lead time by product" · "psp-completed cases by product" · "cases on hold". For anything more complex, switch to Claude mode.</span>';return;}
@@ -2799,7 +2763,7 @@ async function runLocalQuery(){
       lastNlqRows=data.rows;nlqAllRows=[...data.rows];nlqFilteredRows=[...data.rows];nlqSortKey='value';nlqSortAsc=false;nlqPage=1;
       const isLt=actualMetric.includes('lt');const labels=data.rows.map(r=>r.label&&r.label.length>20?r.label.slice(0,18)+'...':r.label||'Unknown');const values=data.rows.map(r=>parseFloat(r.value)||0);
       document.getElementById('queryChartWrap').style.display='block';if(queryChart){queryChart.destroy();queryChart=null;}
-      queryChart=new Chart(document.getElementById('queryChart'),{type:'bar',data:{labels,datasets:[{label:i.l,data:values,backgroundColor:'#005F72cc',borderColor:'#005F72',borderWidth:1,borderRadius:4}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{backgroundColor:'#fff',borderColor:'#e5e7eb',borderWidth:1,titleColor:'#111827',bodyColor:'#374151',padding:8},datalabels:{color:'#374151',font:{size:9,weight:'600'},anchor:'end',align:'top',formatter:v=>v>0?(isLt?v+'d':v):''}},scales:{x:{ticks:{color:'#111827',font:{size:12}},grid:{color:'#e5e7eb'},border:{color:'#374151'}},y:{ticks:{color:'#111827',font:{size:12}},grid:{color:'#e5e7eb'},border:{color:'#374151'},beginAtZero:true}}}});
+      queryChart=new Chart(document.getElementById('queryChart'),{type:'bar',data:{labels,datasets:[{label:i.l,data:values,backgroundColor:'#005F72cc',borderColor:'#005F72',borderWidth:1,borderRadius:4}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{backgroundColor:'#fff',borderColor:'#e5e7eb',borderWidth:1,titleColor:'#111827',bodyColor:'#374151',padding:8},datalabels:{color:'#374151',font:{size:9,weight:'600'},anchor:'end',align:'top',formatter:v=>v>0?(isLt?v+'d':v):''}},layout:{padding:{top:20}},scales:{x:{ticks:{color:'#111827',font:{size:12}},grid:{color:'#e5e7eb'},border:{color:'#374151'}},y:{ticks:{color:'#111827',font:{size:12}},grid:{color:'#e5e7eb'},border:{color:'#374151'},beginAtZero:true}}}});
       document.getElementById('nlqTableFilter').classList.add('show');document.getElementById('nlqFilterInput').value='';document.getElementById('nlqFilterCount').textContent=`${data.rows.length} results`;renderNlqTable();document.getElementById('fetchNlqBtn').classList.add('show');
     }else if(data?.value!==undefined){
       document.getElementById('queryChartWrap').style.display='none';document.getElementById('nlqPagination').style.display='none';
@@ -2808,7 +2772,7 @@ async function runLocalQuery(){
   }catch(e){rt.innerHTML='<span style="color:var(--red)">Error - check backend</span>';}
 }
 
-async function runClaudeQuery(){const q=document.getElementById('queryInput').value.trim();if(!q)return toast('Please enter a query','err');const rd=document.getElementById('queryResult'),rt=document.getElementById('queryResultText'),rl=document.getElementById('queryResultLabel');rd.classList.add('show');rt.innerHTML='<i class="fa fa-spinner fa-spin" style="color:var(--accent-dark)"></i> Thinking...';document.getElementById('queryResultMeta').textContent='';document.getElementById('queryChartWrap').style.display='none';document.getElementById('fetchNlqBtn').classList.remove('show');document.getElementById('nlqTableFilter').classList.remove('show');document.getElementById('nlqPagination').style.display='none';lastNlqRows=null;nlqAllRows=[];nlqFilteredRows=[];currentNlqMetric='';rl.textContent='Result';
+async function runClaudeQuery(){const q=document.getElementById('queryInput').value.trim();if(!q)return toast('Please enter a query','err');const rd=document.getElementById('queryResult'),rt=document.getElementById('queryResultText'),rl=document.getElementById('queryResultLabel');rd.classList.add('show');rt.innerHTML='<i class="fa fa-spinner fa-spin" style="color:var(--accent-dark)"></i> Thinking...';document.getElementById('queryResultMeta').textContent='';document.getElementById('queryChartWrap').style.display='none';document.getElementById('fetchNlqBtn').classList.remove('show');document.getElementById('nlqTableFilter').classList.remove('show');document.getElementById('nlqPagination').style.display='none';lastNlqRows=null;lastNlqInterpretedFilters=null;nlqAllRows=[];nlqFilteredRows=[];currentNlqMetric='';rl.textContent='Result';
   let data=null;
   const nd=getNlqDates();
   const filters={
@@ -2849,11 +2813,11 @@ async function runClaudeQuery(){const q=document.getElementById('queryInput').va
   const isChartRows=lastStep&&lastStep.rows&&lastStep.rows.length&&Object.prototype.hasOwnProperty.call(lastStep.rows[0],'label');
   const isDerivedRows=lastStep&&lastStep.rows&&lastStep.rows.length&&!isChartRows;
 
-  if(isChartRows){lastNlqRows=lastStep.rows;nlqAllRows=[...lastStep.rows];nlqFilteredRows=[...lastStep.rows];nlqSortKey='value';nlqSortAsc=false;nlqPage=1;
+  if(isChartRows){lastNlqRows=lastStep.rows;lastNlqInterpretedFilters=lastStep.interpreted_as||null;nlqAllRows=[...lastStep.rows];nlqFilteredRows=[...lastStep.rows];nlqSortKey='value';nlqSortAsc=false;nlqPage=1;
     rt.innerHTML='';
     const isLt=actualMetric.includes('lt');const labels=lastStep.rows.map(r=>r.label&&r.label.length>20?r.label.slice(0,18)+'...':r.label||'Unknown');const values=lastStep.rows.map(r=>parseFloat(r.value)||0);
     document.getElementById('queryChartWrap').style.display='block';if(queryChart){queryChart.destroy();queryChart=null;}
-    queryChart=new Chart(document.getElementById('queryChart'),{type:'bar',data:{labels,datasets:[{label:lastStep.step_label||actualMetric,data:values,backgroundColor:'#005F72cc',borderColor:'#005F72',borderWidth:1,borderRadius:4}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{backgroundColor:'#fff',borderColor:'#e5e7eb',borderWidth:1,titleColor:'#111827',bodyColor:'#374151',padding:8},datalabels:{color:'#374151',font:{size:9,weight:'600'},anchor:'end',align:'top',formatter:v=>v>0?(isLt?v+'d':v):''}},scales:{x:{ticks:{color:'#111827',font:{size:12}},grid:{color:'#e5e7eb'},border:{color:'#374151'}},y:{ticks:{color:'#111827',font:{size:12}},grid:{color:'#e5e7eb'},border:{color:'#374151'},beginAtZero:true}}}});
+    queryChart=new Chart(document.getElementById('queryChart'),{type:'bar',data:{labels,datasets:[{label:lastStep.step_label||actualMetric,data:values,backgroundColor:'#005F72cc',borderColor:'#005F72',borderWidth:1,borderRadius:4}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{backgroundColor:'#fff',borderColor:'#e5e7eb',borderWidth:1,titleColor:'#111827',bodyColor:'#374151',padding:8},datalabels:{color:'#374151',font:{size:9,weight:'600'},anchor:'end',align:'top',formatter:v=>v>0?(isLt?v+'d':v):''}},layout:{padding:{top:20}},scales:{x:{ticks:{color:'#111827',font:{size:12}},grid:{color:'#e5e7eb'},border:{color:'#374151'}},y:{ticks:{color:'#111827',font:{size:12}},grid:{color:'#e5e7eb'},border:{color:'#374151'},beginAtZero:true}}}});
     document.getElementById('nlqTableFilter').classList.add('show');document.getElementById('nlqFilterInput').value='';document.getElementById('nlqFilterCount').textContent=`${lastStep.rows.length} results`;renderNlqTable();document.getElementById('fetchNlqBtn').classList.add('show');
   }else if(isDerivedRows){document.getElementById('queryChartWrap').style.display='none';document.getElementById('nlqPagination').style.display='none';document.getElementById('nlqTableFilter').classList.remove('show');
     rt.innerHTML='<div id="nlqCaseTableWrap"></div>';
