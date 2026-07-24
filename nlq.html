@@ -462,7 +462,7 @@
   </div>
   <div class="sb-section">Dashboard</div>
   <nav><ul>
-    <li><a href="https://restor3dindia.netlify.app/"><i class="fa fa-home"></i>Dashboard</a></li>
+    <li><a href="https://restor3dindia.netlify.app/"><i class="fa fa-home"></i><span>Dashboard</span></a></li>
   </ul></nav>
   <div class="sb-collapse-btn" onclick="toggleSidebar()" title="Collapse sidebar">
     <i class="fa fa-chevron-left" id="sbCollapseIcon"></i>
@@ -3971,15 +3971,15 @@ async function generateReport(){
   }
 }
 
-// ── Sidebar collapse ──
+// ── Sidebar collapse ── (default: collapsed, unless the person previously expanded it)
 function toggleSidebar(){
   const collapsed = document.body.classList.toggle('sidebar-collapsed');
   const icon = document.getElementById('sbCollapseIcon');
   if(icon) icon.className = collapsed ? 'fa fa-chevron-right' : 'fa fa-chevron-left';
-  localStorage.setItem('sidebarCollapsed', collapsed ? '1' : '');
+  localStorage.setItem('sidebarCollapsed', collapsed ? '1' : '0');
 }
 (function(){
-  if(localStorage.getItem('sidebarCollapsed')){
+  if(localStorage.getItem('sidebarCollapsed') !== '0'){
     document.body.classList.add('sidebar-collapsed');
     const icon = document.getElementById('sbCollapseIcon');
     if(icon) icon.className = 'fa fa-chevron-right';
