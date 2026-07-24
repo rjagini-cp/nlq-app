@@ -357,7 +357,7 @@ def fetch_cases_by_ids_query(case_ids, include_hold_user=False):
     LEFT JOIN {tbl('vw_lkup_last_case_notes')} cn ON base.id = cn.caseid{hold_join}
     WHERE base.id IN ('{ids_str}')
     ORDER BY base.createdAt DESC
-    LIMIT 500
+    LIMIT 10000
     """
 
 def volume_case_joins():
@@ -695,13 +695,13 @@ def analytics_cases():
         if args.get('milestone_field') and (args.get('date_from') or args.get('date_to')):
             mf = args.get('milestone_field')
             df_filter = date_range_filter(mf, args.get('date_from',''), args.get('date_to',''))
-            query = f"WITH {signoff_cte()}, {on_hold_cte()} SELECT {case_select_fields()} {case_joins()} WHERE {where} AND {df_filter} ORDER BY f.createdAt DESC LIMIT 500"
+            query = f"WITH {signoff_cte()}, {on_hold_cte()} SELECT {case_select_fields()} {case_joins()} WHERE {where} AND {df_filter} ORDER BY f.createdAt DESC LIMIT 10000"
         else:
             if args.get('date_from'):
                 where += f" AND f.createdAt >= '{validate_date(args.get('date_from'))}'"
             if args.get('date_to'):
                 where += f" AND f.createdAt <= '{validate_date(args.get('date_to'))} 23:59:59'"
-            query = f"WITH {signoff_cte()}, {on_hold_cte()} SELECT {case_select_fields()} {case_joins()} WHERE {where} ORDER BY f.createdAt DESC LIMIT 500"
+            query = f"WITH {signoff_cte()}, {on_hold_cte()} SELECT {case_select_fields()} {case_joins()} WHERE {where} ORDER BY f.createdAt DESC LIMIT 10000"
         df = client.query(query).to_dataframe()
         return jsonify({"cases": format_cases(df), "count": len(df)})
     except Exception as e:
@@ -947,7 +947,7 @@ NLQ_TOOL = {
 
 NLQ_LIST_CASES_TOOL = {
     "name": "list_cases",
-    "description": "Return up to 500 INDIVIDUAL case rows matching the given filters, including: case number, product, case type, phase, surgeon, facility, laterality, on-hold status, days on hold, the exact date/time put on hold (put_on_hold_at), the on-hold comment (oh_note), and the most recent case/internal/design notes with author and date. Use this when the user asks to 'list', 'show me the cases', 'which cases', or wants case-level detail (including hold reasons/notes/dates) rather than a count/average. Do NOT use for aggregates — use run_case_query for those.",
+    "description": "Return up to 10000 INDIVIDUAL case rows matching the given filters, including: case number, product, case type, phase, surgeon, facility, laterality, on-hold status, days on hold, the exact date/time put on hold (put_on_hold_at), the on-hold comment (oh_note), and the most recent case/internal/design notes with author and date. Use this when the user asks to 'list', 'show me the cases', 'which cases', or wants case-level detail (including hold reasons/notes/dates) rather than a count/average. Do NOT use for aggregates — use run_case_query for those.",
     "input_schema": {
         "type": "object",
         "properties": {
@@ -1274,7 +1274,7 @@ def _nlq_enrich_case_type(cases: list) -> None:
             c.setdefault('case_type_name', '')
 
 def _nlq_execute_list_cases(parsed: dict) -> dict:
-    """Lists up to 500 individual case rows using the SAME query path as the
+    """Lists up to 10000 individual case rows using the SAME query path as the
     existing /analytics/cases endpoint (build_where_clause, case_select_fields,
     case_joins, signoff_cte, on_hold_cte, on_hold_user_cte, format_cases) — no
     new SQL surface, just the existing trusted case-listing code reused for
@@ -1310,7 +1310,7 @@ def _nlq_execute_list_cases(parsed: dict) -> dict:
         if date_from: where += f" AND f.createdAt >= '{validate_date(date_from)}'"
         if date_to: where += f" AND f.createdAt <= '{validate_date(date_to)} 23:59:59'"
 
-    query = f"WITH {signoff_cte()}, {on_hold_cte()}, {on_hold_user_cte()} SELECT {case_select_fields(include_hold_user=True)} {case_joins(include_hold_user=True)} WHERE {where} ORDER BY f.createdAt DESC LIMIT 500"
+    query = f"WITH {signoff_cte()}, {on_hold_cte()}, {on_hold_user_cte()} SELECT {case_select_fields(include_hold_user=True)} {case_joins(include_hold_user=True)} WHERE {where} ORDER BY f.createdAt DESC LIMIT 10000"
     df = client.query(query).to_dataframe()
     cases = format_cases(df)
     _nlq_enrich_case_type(cases)
@@ -1475,7 +1475,7 @@ def _nlq_execute_wip(parsed: dict) -> dict:
             c['wip_stage'] = stage
             all_cases.append(c)
 
-    all_cases = all_cases[:500]
+    all_cases = all_cases[:10000]
     _nlq_enrich_case_type(all_cases)
     return {
         "step_label": parsed['step_label'],
