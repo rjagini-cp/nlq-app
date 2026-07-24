@@ -585,6 +585,52 @@
     </div>
 
     <!-- ══════════════════════════════════════════════════════ -->
+    <!-- CASE LIST — third section, always visible, outside R3ID and CamStar -->
+    <div class="filters-card" style="margin-top:24px;border-left:4px solid #005F72">
+      <div style="display:flex;align-items:center;gap:8px;padding:0 0 8px 0;border-bottom:3px solid #005F72;margin-bottom:10px">
+        <i class="fa fa-table" style="color:#005F72"></i>
+        <span style="font-weight:700;color:#005F72;font-size:13px">Case List</span>
+      </div>
+    <div class="table-card" id="tableCard" style="margin-bottom:0;border:none;padding:0;box-shadow:none">
+      <div class="table-hdr">
+        <div>
+          <div class="table-title" id="tableTitle">Case List</div>
+          <div class="table-source" id="tableSource">Apply filters or click a KPI card button to load cases</div>
+        </div>
+        <div class="table-actions">
+          <button class="export-btn" id="exportBtn" style="display:none" onclick="exportCSV()"><i class="fa fa-download"></i> Export</button>
+          <button class="fetch-btn" id="fetchBtn" onclick="fetchAllCases()"><i class="fa fa-search"></i> Fetch All Cases</button>
+        </div>
+      </div>
+      <div class="table-toolbar" id="tableToolbar">
+        <span class="table-search-count" id="tableSearchCount"></span>
+        <button class="export-btn" id="clearFiltersBtn" style="display:none" onclick="clearTableFilters()"><i class="fa fa-times"></i> Clear Filters</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead id="caseTableHead"><tr>
+            <th onclick="sortTable('alias')">Case <i class="fa fa-sort"></i></th>
+            <th onclick="sortTable('case_category_name')">Product <i class="fa fa-sort"></i></th>
+            <th onclick="sortTable('phase')">Phase <i class="fa fa-sort"></i></th>
+            <th onclick="sortTable('phy_nameLast')">Surgeon <i class="fa fa-sort"></i></th>
+            <th onclick="sortTable('total_lt')">Total LT <i class="fa fa-sort"></i></th>
+            <th onclick="sortTable('seg_lt')">Seg LT <i class="fa fa-sort"></i></th>
+            <th onclick="sortTable('surgeon_lt')">Surgeon LT <i class="fa fa-sort"></i></th>
+            <th onclick="sortTable('digital_lt')">Digital LT <i class="fa fa-sort"></i></th>
+            <th>Outlier</th>
+            <th onclick="sortTable('onhold_days')">On Hold Days <i class="fa fa-sort"></i></th>
+            <th>Ship Date</th>
+            <th>Notes</th>
+          </tr></thead>
+          <tbody id="caseTableBody"><tr><td colspan="12"><div class="tbl-empty"><i class="fa fa-table"></i><p>Apply filters or click a KPI card button to load cases</p></div></td></tr></tbody>
+        </table>
+      </div>
+      <div class="tbl-footer" id="tblFooter" style="display:none">
+        <span class="tbl-count" id="tblCount"></span>
+        <div class="pagination" id="pagination"></div>
+      </div>
+    </div><!-- /table-card -->
+    </div><!-- /case list filters-card -->
   </div><!-- /content -->
 </div><!-- /app-wrapper -->
 <script>
@@ -2446,7 +2492,20 @@ function applyAllTableFilters(){
   renderTable();
 }
 
-async function fetchAllCases(){const btn=document.getElementById('fetchBtn');btn.disabled=true;btn.innerHTML='<i class="fa fa-spinner fa-spin"></i> Fetching...';isOnHoldTable=false;showLoading('Fetching cases...');try{const res=await fetch(`${API}/analytics/cases?${buildQS()}`);const data=res.ok?await res.json():null;if(data?.cases)loadCasesIntoTable(data.cases,'All Cases',`${data.cases.length} cases - created in date range`,false);}catch(e){toast('Error','err');}finally{btn.disabled=false;btn.innerHTML='<i class="fa fa-search"></i> Fetch All Cases';hideLoading();}}
+async function fetchAllCases(){const btn=document.getElementById('fetchBtn');btn.disabled=true;btn.innerHTML='<i class="fa fa-spinner fa-spin"></i> Fetching...';isOnHoldTable=false;showLoading('Fetching cases...');try{
+  // No shared "R3ID Filters" card on this page — build the query directly
+  // from NLQ's own filter bar (Product Name/Case Type/Process Step/User),
+  // same fields runClaudeQuery() already sends to /analytics/nlq.
+  const nd=getNlqDates();
+  const params=new URLSearchParams();
+  if(SEL.nlqProductName.length)params.append('product',SEL.nlqProductName.join(','));
+  else if(SEL.nlqProductGroup.length)params.append('product_group',SEL.nlqProductGroup.join(','));
+  if(SEL.nlqCaseType.length)params.append('case_type',SEL.nlqCaseType.join(','));
+  if(SEL.nlqStep.length)params.append('step',SEL.nlqStep.join(','));
+  if(SEL.nlqStepUser.length)params.append('step_user',SEL.nlqStepUser.join(','));
+  if(nd.from)params.append('date_from',nd.from);
+  if(nd.to)params.append('date_to',nd.to);
+  const res=await fetch(`${API}/analytics/cases?${params.toString()}`);const data=res.ok?await res.json():null;if(data?.cases)loadCasesIntoTable(data.cases,'All Cases',`${data.cases.length} cases - created in date range`,false);}catch(e){toast('Error','err');}finally{btn.disabled=false;btn.innerHTML='<i class="fa fa-search"></i> Fetch All Cases';hideLoading();}}
 async function fetchNlqCases(){if(!lastNlqRows?.length)return;const labels=lastNlqRows.map(r=>r.label).filter(Boolean);if(!labels.length)return;const GROUPBY_TO_FILTER_PARAM={product:'product',case_type:'case_type',surgeon:'surgeon',facility:'facility',state:'state'};const filterParam=GROUPBY_TO_FILTER_PARAM[lastNlqGroupBy];if(!filterParam){toast('Cannot fetch individual cases for a "'+(lastNlqGroupBy||'this')+'" breakdown — try a Product, Case Type, Surgeon, Facility, or State grouping instead','err');return;}isOnHoldTable=false;showLoading('Fetching cases...');try{const f=lastNlqInterpretedFilters||{};const params=new URLSearchParams();params.append(filterParam,labels.join(','));['product','product_group','case_type','step','step_user','laterality','regulatory','surgeon','facility','state','date_from','date_to'].forEach(k=>{if(k!==filterParam&&f[k])params.append(k,f[k]);});const VOLUME_STYLE_METRICS=new Set(['created','seg_completed','psp_completed','surgeon_completed','peer_review_completed']);if(VOLUME_STYLE_METRICS.has(currentNlqMetric))params.append('case_population','volume');if(f.use_created_at){params.append('use_created_at','true');}else{const NLQ_MILESTONE_MAP={total_lt:'s.ship_wrk_comp_date',seg_lt:'sd.seg_review_date',surgeon_lt:'sd.surgeon_approval_date',digital_lt:'sd.first_psp_review_date',count:'sd.first_psp_review_date',seg_completed:'sd.seg_review_date',psp_completed:'sd.first_psp_review_date',surgeon_completed:'sd.surgeon_approval_date',peer_review_completed:'sd.peer_review_date'};const mf=NLQ_MILESTONE_MAP[currentNlqMetric];if(mf)params.append('milestone_field',mf);}const res=await fetch(`${API}/analytics/cases?${params.toString()}`);const data=res.ok?await res.json():null;if(data?.cases)loadCasesIntoTable(data.cases,'NLQ Result Cases',`${data.count} cases`,false);}catch(e){toast('Error','err');}finally{hideLoading();}}
 
 function notesCell(c){
