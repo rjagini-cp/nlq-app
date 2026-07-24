@@ -634,6 +634,12 @@
           </div>
           <button class="kpi-calc-btn" style="height:30px;width:auto;padding:0 10px;margin:0" id="loadStepsBtn" onclick="loadSteps()"><i class="fa fa-sync"></i> Load</button>
         </div>
+        <div class="ms-wrap">
+          <div class="ms-label">Group <span style="font-weight:400;color:var(--text-4);font-size:9px">(auto-selects matching users below)</span></div>
+          <select id="groupSelect" onchange="onGroupSelect(this.value)" style="width:100%;padding:5px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;background:var(--bg-input);color:var(--text-1)">
+            <option value="">— Select a group —</option>
+          </select>
+        </div>
         <div class="ms-wrap" style="display:flex;gap:6px;align-items:flex-end">
           <div style="flex:1">
             <div class="ms-label">User</div>
@@ -803,6 +809,38 @@ async function loadSteps(){
     }
   }catch(e){toast('Error loading steps','err');}
   finally{btn.disabled=false;btn.innerHTML='<i class="fa fa-sync"></i> Load';}
+}
+
+let USER_GROUPS_LIVE = {};
+
+async function loadUserGroups(){
+  try{
+    const res = await fetch(`${API}/analytics/user-groups`);
+    USER_GROUPS_LIVE = await res.json();
+    const sel = document.getElementById('groupSelect');
+    if(!sel) return;
+    const teams = Object.keys(USER_GROUPS_LIVE.bigquery || {}).sort();
+    sel.innerHTML = '<option value="">— Select a group —</option>' +
+      teams.map(t => `<option value="${esc(t)}">${esc(t)}</option>`).join('');
+  }catch(e){ console.error('loadUserGroups error', e); }
+}
+
+async function onGroupSelect(teamName){
+  if(!teamName) return;
+  if(!document.querySelectorAll('#list-stepUser input[type=checkbox]').length){
+    await loadUsers();
+  }
+  clearDD('stepUser', null);
+  const members = (USER_GROUPS_LIVE.bigquery || {})[teamName] || [];
+  document.getElementById('list-stepUser')?.querySelectorAll('input[type=checkbox]').forEach(cb=>{
+    if(members.includes(cb.value)){
+      cb.checked = true;
+      onCheck('stepUser', cb.value, true);
+    }
+  });
+  if(!members.length){
+    toast(`No known users in "${teamName}" yet`, 'info');
+  }
 }
 
 async function loadUsers(){
@@ -2089,6 +2127,7 @@ document.addEventListener('DOMContentLoaded',async()=>{
   populateMonthPicker();buildStaticLists();  await loadConfig();
   applyInitialCollapseState();
   loadCaseTypes();
+  loadUserGroups();
   document.addEventListener('click',e=>{
     document.querySelectorAll('.ms-dropdown.open').forEach(dd=>{if(!dd.closest('.ms-wrap').contains(e.target)){dd.classList.remove('open');dd.previousElementSibling.classList.remove('open');}});
     document.querySelectorAll('.col-filter-dropdown.open').forEach(dd=>{if(!dd.closest('.col-filter-wrap').contains(e.target))dd.classList.remove('open');});
