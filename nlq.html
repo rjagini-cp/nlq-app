@@ -92,7 +92,8 @@
     .query-result-hdr{padding:8px 14px;font-size:10px;color:var(--text-4);display:flex;justify-content:space-between;align-items:flex-start;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:6px}
     .query-result-meta{font-size:9px;color:var(--text-4);font-style:italic;margin-top:2px}
     .query-result-body{padding:12px 14px}
-    .query-chart-wrap{height:220px;margin-bottom:10px}
+    .query-chart-wrap{height:220px;margin-bottom:10px;position:relative}
+    .query-chart-wrap .copy-btn{opacity:1}
     .view-sql{background:none;border:1px solid var(--border-dark);color:var(--text-3);padding:2px 8px;border-radius:4px;font-size:10px;cursor:pointer}
     .view-sql:hover{border-color:var(--accent);color:var(--accent-dark)}
     .fetch-nlq-btn{background:var(--accent-dark);border:none;color:#fff;padding:4px 12px;border-radius:5px;font-size:11px;font-weight:600;cursor:pointer;display:none;gap:5px;align-items:center}
@@ -562,7 +563,7 @@
             </div>
           </div>
           <div class="query-result-body">
-            <div class="query-chart-wrap" id="queryChartWrap" style="display:none"><canvas id="queryChart"></canvas></div>
+            <div class="query-chart-wrap" id="queryChartWrap" style="display:none"><canvas id="queryChart"></canvas><button class="copy-btn" onclick="copyChart('queryChart', queryResultLabelText(), event)"><i class="fa fa-copy"></i> Copy</button></div>
             <div class="nlq-table-filter" id="nlqTableFilter">
               <input class="nlq-filter-input" id="nlqFilterInput" placeholder="Filter results..." oninput="filterNlqTable(this.value)"/>
               <span class="nlq-filter-count" id="nlqFilterCount"></span>
@@ -2549,7 +2550,7 @@ function applyAllTableFilters(){
 }
 
 async function fetchAllCases(){const btn=document.getElementById('fetchBtn');btn.disabled=true;btn.innerHTML='<i class="fa fa-spinner fa-spin"></i> Fetching...';isOnHoldTable=false;showLoading('Fetching cases...');try{const res=await fetch(`${API}/analytics/cases?${buildQS()}`);const data=res.ok?await res.json():null;if(data?.cases)loadCasesIntoTable(data.cases,'All Cases',`${data.cases.length} cases - created in date range`,false);}catch(e){toast('Error','err');}finally{btn.disabled=false;btn.innerHTML='<i class="fa fa-search"></i> Fetch All Cases';hideLoading();}}
-async function fetchNlqCases(){if(!lastNlqRows?.length)return;const labels=lastNlqRows.map(r=>r.label).filter(Boolean);if(!labels.length)return;isOnHoldTable=false;showLoading('Fetching cases...');try{const f=lastNlqInterpretedFilters||{};const params=new URLSearchParams();params.append('product',labels.join(','));['case_type','step','step_user','laterality','regulatory','surgeon','facility','state','date_from','date_to'].forEach(k=>{if(f[k])params.append(k,f[k]);});if(f.use_created_at)params.append('use_created_at','true');const res=await fetch(`${API}/analytics/cases?${params.toString()}`);const data=res.ok?await res.json():null;if(data?.cases)loadCasesIntoTable(data.cases,'NLQ Result Cases',`${data.count} cases`,false);}catch(e){toast('Error','err');}finally{hideLoading();}}
+async function fetchNlqCases(){if(!lastNlqRows?.length)return;const labels=lastNlqRows.map(r=>r.label).filter(Boolean);if(!labels.length)return;isOnHoldTable=false;showLoading('Fetching cases...');try{const f=lastNlqInterpretedFilters||{};const params=new URLSearchParams();params.append('product',labels.join(','));['case_type','step','step_user','laterality','regulatory','surgeon','facility','state','date_from','date_to'].forEach(k=>{if(f[k])params.append(k,f[k]);});if(f.use_created_at){params.append('use_created_at','true');}else{const NLQ_MILESTONE_MAP={total_lt:'s.ship_wrk_comp_date',seg_lt:'sd.seg_review_date',surgeon_lt:'sd.surgeon_approval_date',digital_lt:'sd.first_psp_review_date',count:'sd.first_psp_review_date',seg_completed:'sd.seg_review_date',psp_completed:'sd.first_psp_review_date',surgeon_completed:'sd.surgeon_approval_date',peer_review_completed:'sd.peer_review_date'};const mf=NLQ_MILESTONE_MAP[currentNlqMetric];if(mf)params.append('milestone_field',mf);}const res=await fetch(`${API}/analytics/cases?${params.toString()}`);const data=res.ok?await res.json():null;if(data?.cases)loadCasesIntoTable(data.cases,'NLQ Result Cases',`${data.count} cases`,false);}catch(e){toast('Error','err');}finally{hideLoading();}}
 
 function notesCell(c){
   const notes=[];
@@ -2846,6 +2847,7 @@ function toggleNlqSection(){
 function toggleRptMoreFilters(){const t=document.getElementById('rptMoreToggle'),f=document.getElementById('rptMoreFilters');t.classList.toggle('open');f.style.display=(f.style.display==='none')?'block':'none';}
 function showLoading(msg='the data is loading'){document.getElementById('loadingGif').src=randomGif();document.getElementById('loadingText').textContent=msg;document.getElementById('loadingOverlay').classList.add('show');}
 function hideLoading(){document.getElementById('loadingOverlay').classList.remove('show');}
+function queryResultLabelText(){return document.getElementById('queryResultLabel')?.textContent?.trim()||'Data Genie Chart';}
 function toast(msg,type='ok'){const c=document.getElementById('toastContainer'),el=document.createElement('div');el.className='toast'+(type==='err'?' err':type==='info'?' info':'');el.innerHTML=`<i class="fa ${type==='err'?'fa-exclamation-circle':type==='info'?'fa-info-circle':'fa-check-circle'}" style="margin-right:6px;color:${type==='err'?'var(--red)':type==='info'?'var(--accent)':'var(--green)'}"></i>${msg}`;c.appendChild(el);setTimeout(()=>el.remove(),3500);}
 
 // ══════════════════════════════════════════════════════════════

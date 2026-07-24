@@ -1156,22 +1156,28 @@ def _nlq_execute(parsed: dict) -> dict:
         agg_expr = agg_map.get(agg, 'ROUND(AVG({}), 1)').format(METRIC_MAP.get(metric, ('1','',''))[0])
         count_expr = "COUNT(DISTINCT f.id)"
 
-    # ── Completion metrics need the volume-style query path — the trusted Volume tile bypasses ──
-    # vw_fact_case (which drops COMPLETED cases) and uses raw Case + CaseCategory instead. Rebuild
-    # `where`, join set, and grouping columns from the volume-style helpers when this is a completion metric.
+    # ── Completion metrics AND the 'created' metric need the volume-style query path — the trusted ──
+    # Volume tile bypasses vw_fact_case (which drops COMPLETED cases) and the Case_In_Take restriction
+    # baked into build_where_clause/where, and instead uses raw Case + CaseCategory. 'created' is included
+    # here too: it should count ALL cases created in the window, not just the 3 Case_In_Take types that
+    # build_where_clause silently restricts to — that restriction made 'cases created' undercount relative
+    # to 'psp_completed' and other volume-style metrics for the exact same case_type/date filters.
     is_completion_metric = metric in completion_field_map
-    if is_completion_metric:
+    is_created_metric = metric == 'created'
+    if is_completion_metric or is_created_metric:
         vol_where = volume_where_clause(shim)
         # Rebuild date filter with the correct field alias — same date range logic, unchanged.
         vol_date_filter = ""
-        if use_created_at:
+        if is_created_metric or use_created_at:
+            # 'created' always means case creation date, regardless of the use_created_at flag.
             if date_from: vol_date_filter += f" AND f.createdAt >= '{validate_date(date_from)}'"
             if date_to: vol_date_filter += f" AND f.createdAt <= '{validate_date(date_to)} 23:59:59'"
         else:
             vol_date_field = completion_field_map[metric]
             if date_from or date_to:
                 vol_date_filter = f"AND {date_range_filter(vol_date_field, date_from, date_to)}"
-        vol_date_filter += f" AND {completion_field_map[metric]} IS NOT NULL"
+        if is_completion_metric:
+            vol_date_filter += f" AND {completion_field_map[metric]} IS NOT NULL"
         # Volume uses cc.name for product grouping and ct.name for case type — not f.case_category_name.
         group_map = {'product':'cc.name','case_type':'ct.name','month':"FORMAT_DATETIME('%b %Y', CAST(f.createdAt AS DATETIME))",'surgeon':"CONCAT(f.phy_nameFirst, ' ', f.phy_nameLast)",'phase':'f.phase','state':'f.fac_state','facility':'f.fac_name'}
         ctes = f"WITH {signoff_cte()}, {on_hold_cte()}"
