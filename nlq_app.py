@@ -691,6 +691,36 @@ def users_by_step():
 def analytics_cases():
     try:
         args = request.args
+        if args.get('case_population') == 'volume':
+            # Volume-style case population: raw Case + CaseCategory + CaseType, the SAME
+            # unrestricted table/filter logic used by the 'created' and *_completed NLQ metrics
+            # (see volume_where_clause / is_completion_metric / is_created_metric in _nlq_execute).
+            # This intentionally does NOT go through build_where_clause's Case_In_Take restriction —
+            # using that here would silently undercount vs. the chart that generated these filters.
+            vol_where = volume_where_clause(args)
+            vol_date_filter = ""
+            if args.get('use_created_at') == 'true':
+                if args.get('date_from'):
+                    vol_date_filter += f" AND f.createdAt >= '{validate_date(args.get('date_from'))}'"
+                if args.get('date_to'):
+                    vol_date_filter += f" AND f.createdAt <= '{validate_date(args.get('date_to'))} 23:59:59'"
+            elif args.get('milestone_field') and (args.get('date_from') or args.get('date_to')):
+                vol_date_filter = f" AND {date_range_filter(args.get('milestone_field'), args.get('date_from',''), args.get('date_to',''))}"
+            id_query = f"""
+                WITH {signoff_cte()}
+                SELECT DISTINCT f.id
+                {volume_case_joins()}
+                WHERE {vol_where} {vol_date_filter}
+                LIMIT 10000
+            """
+            id_df = client.query(id_query).to_dataframe()
+            case_ids = id_df['id'].astype(str).tolist() if not id_df.empty else []
+            if not case_ids:
+                return jsonify({"cases": [], "count": 0})
+            query = fetch_cases_by_ids_query(case_ids)
+            df = client.query(query).to_dataframe()
+            return jsonify({"cases": format_cases(df), "count": len(df)})
+
         where = build_where_clause(args)
         if args.get('milestone_field') and (args.get('date_from') or args.get('date_to')):
             mf = args.get('milestone_field')
