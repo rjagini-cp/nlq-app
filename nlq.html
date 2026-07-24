@@ -525,15 +525,17 @@
       </div>
       <div id="nlqSectionBody">
         <div class="date-presets" id="nlqDatePresets">
-          <span class="date-preset" onclick="setNlqDatePreset(this,7)">Last 7 Days</span>
-          <span class="date-preset" onclick="setNlqDatePreset(this,14)">Last 2 Weeks</span>
-          <span class="date-preset" onclick="setNlqDatePreset(this,28)">Last 4 Weeks</span>
-          <span class="date-preset" onclick="setNlqDatePreset(this,56)">Last 8 Weeks</span>
-          <span class="date-preset active" onclick="setNlqDatePreset(this,180)">Last 6 Months</span>
-          <span class="date-preset" onclick="setNlqDatePreset(this,365)">Last 12 Months</span>
-          <span class="date-preset" onclick="setNlqAllTime(this)">All Time</span>
-          <span class="date-preset" onclick="setNlqMonthPicker(this)">Select Month</span>
-          <span class="date-preset" onclick="setNlqCustomRange(this)">Custom Range</span>
+          <select class="date-input" id="nlqDatePresetSelect" onchange="handleNlqDateSelect(this.value)">
+            <option value="7">Last 7 Days</option>
+            <option value="14">Last 2 Weeks</option>
+            <option value="28">Last 4 Weeks</option>
+            <option value="56">Last 8 Weeks</option>
+            <option value="180" selected>Last 6 Months</option>
+            <option value="365">Last 12 Months</option>
+            <option value="all">All Time</option>
+            <option value="month">Select Month</option>
+            <option value="custom">Custom Range</option>
+          </select>
         </div>
         <div class="month-picker-row" id="nlqMonthPickerRow"><select class="date-input" id="nlqMonthPicker" onchange="applyNlqMonthPicker()"><option value="">Select month...</option></select></div>
         <div class="custom-date-row" id="nlqCustomDateRow">
@@ -613,7 +615,7 @@
 
     <!-- ══════════════════════════════════════════════════════ -->
     <!-- FILTERS -->
-    <div class="filters-card" style="border-left:4px solid var(--accent-dark)">
+    <div class="filters-card" style="border-left:4px solid var(--accent-dark);display:none">
       <div style="display:flex;align-items:center;gap:8px;padding:0 0 8px 0;border-bottom:3px solid var(--accent-dark);margin-bottom:10px;cursor:pointer;user-select:none" onclick="toggleR3IDFilters()">
         <i class="fa fa-filter" style="color:var(--accent-dark)"></i>
         <span style="font-weight:700;color:var(--accent-dark);font-size:13px">R3ID Filters (Customs, TAR, rTSA etc.)</span>
@@ -761,7 +763,7 @@ Chart.register(ChartDataLabels);
 
 // ── APP CONFIG ──
 // Update API_BASE_URL when deploying to a different environment
-const API_BASE_URL = 'nlq-app-production.up.railway.app'; // TODO: set to this service's actual deployed Railway URL
+const API_BASE_URL = 'PASTE_NLQ_RAILWAY_URL_HERE'; // TODO: set to this service's actual deployed Railway URL
 const API = API_BASE_URL; // alias used throughout
 
 // HTML escape helper — use for all dynamic values inserted into innerHTML
@@ -2304,6 +2306,26 @@ function setNlqDatePreset(el,days){document.querySelectorAll('#nlqDatePresets .d
 function setNlqAllTime(el){document.querySelectorAll('#nlqDatePresets .date-preset').forEach(e=>e.classList.remove('active'));el.classList.add('active');document.getElementById('nlqCustomDateRow').classList.remove('show');document.getElementById('nlqMonthPickerRow').classList.remove('show');nlqDateFromVal='';nlqDateToVal='';nlqIsAllTime=true;document.getElementById('nlqDateFrom').value='';document.getElementById('nlqDateTo').value='';}
 function setNlqCustomRange(el){document.querySelectorAll('#nlqDatePresets .date-preset').forEach(e=>e.classList.remove('active'));el.classList.add('active');document.getElementById('nlqCustomDateRow').classList.add('show');document.getElementById('nlqMonthPickerRow').classList.remove('show');nlqIsAllTime=false;}
 function setNlqMonthPicker(el){document.querySelectorAll('#nlqDatePresets .date-preset').forEach(e=>e.classList.remove('active'));el.classList.add('active');document.getElementById('nlqMonthPickerRow').classList.add('show');document.getElementById('nlqCustomDateRow').classList.remove('show');nlqIsAllTime=false;}
+function handleNlqDateSelect(val){
+  document.getElementById('nlqCustomDateRow').classList.remove('show');
+  document.getElementById('nlqMonthPickerRow').classList.remove('show');
+  if(val==='all'){
+    nlqDateFromVal='';nlqDateToVal='';nlqIsAllTime=true;
+    document.getElementById('nlqDateFrom').value='';document.getElementById('nlqDateTo').value='';
+  }else if(val==='month'){
+    document.getElementById('nlqMonthPickerRow').classList.add('show');
+    nlqIsAllTime=false;
+  }else if(val==='custom'){
+    document.getElementById('nlqCustomDateRow').classList.add('show');
+    nlqIsAllTime=false;
+  }else{
+    const days=parseInt(val,10);
+    const to=new Date(),from=new Date();from.setDate(from.getDate()-days);
+    nlqDateToVal=to.toISOString().split('T')[0];nlqDateFromVal=from.toISOString().split('T')[0];
+    document.getElementById('nlqDateFrom').value=nlqDateFromVal;document.getElementById('nlqDateTo').value=nlqDateToVal;
+    nlqIsAllTime=false;
+  }
+}
 function applyNlqMonthPicker(){
   const val=document.getElementById('nlqMonthPicker').value;
   if(!val)return;
