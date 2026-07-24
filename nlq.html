@@ -767,7 +767,7 @@ function setUserRole(role,btn){
 let dateFrom='',dateTo='',isAllTime=false;
 let allCases=[],filteredCases=[],currentPage=1,sortKey='alias',sortAsc=true,isOnHoldTable=false;
 const PAGE_SIZE=25;
-let queryChart=null,lastNlqRows=null,nlqAllRows=[],nlqFilteredRows=[],lastSQL='',currentNlqMetric='',lastNlqInterpretedFilters=null;
+let queryChart=null,lastNlqRows=null,nlqAllRows=[],nlqFilteredRows=[],lastSQL='',currentNlqMetric='',lastNlqInterpretedFilters=null,lastNlqGroupBy=null;
 let nlqSortKey='value',nlqSortAsc=false,nlqPage=1;
 const NLQ_PAGE_SIZE=25;
 let avgDigitalLt=0;
@@ -2550,7 +2550,7 @@ function applyAllTableFilters(){
 }
 
 async function fetchAllCases(){const btn=document.getElementById('fetchBtn');btn.disabled=true;btn.innerHTML='<i class="fa fa-spinner fa-spin"></i> Fetching...';isOnHoldTable=false;showLoading('Fetching cases...');try{const res=await fetch(`${API}/analytics/cases?${buildQS()}`);const data=res.ok?await res.json():null;if(data?.cases)loadCasesIntoTable(data.cases,'All Cases',`${data.cases.length} cases - created in date range`,false);}catch(e){toast('Error','err');}finally{btn.disabled=false;btn.innerHTML='<i class="fa fa-search"></i> Fetch All Cases';hideLoading();}}
-async function fetchNlqCases(){if(!lastNlqRows?.length)return;const labels=lastNlqRows.map(r=>r.label).filter(Boolean);if(!labels.length)return;isOnHoldTable=false;showLoading('Fetching cases...');try{const f=lastNlqInterpretedFilters||{};const params=new URLSearchParams();params.append('product',labels.join(','));['case_type','step','step_user','laterality','regulatory','surgeon','facility','state','date_from','date_to'].forEach(k=>{if(f[k])params.append(k,f[k]);});if(f.use_created_at){params.append('use_created_at','true');}else{const NLQ_MILESTONE_MAP={total_lt:'s.ship_wrk_comp_date',seg_lt:'sd.seg_review_date',surgeon_lt:'sd.surgeon_approval_date',digital_lt:'sd.first_psp_review_date',count:'sd.first_psp_review_date',seg_completed:'sd.seg_review_date',psp_completed:'sd.first_psp_review_date',surgeon_completed:'sd.surgeon_approval_date',peer_review_completed:'sd.peer_review_date'};const mf=NLQ_MILESTONE_MAP[currentNlqMetric];if(mf)params.append('milestone_field',mf);}const res=await fetch(`${API}/analytics/cases?${params.toString()}`);const data=res.ok?await res.json():null;if(data?.cases)loadCasesIntoTable(data.cases,'NLQ Result Cases',`${data.count} cases`,false);}catch(e){toast('Error','err');}finally{hideLoading();}}
+async function fetchNlqCases(){if(!lastNlqRows?.length)return;const labels=lastNlqRows.map(r=>r.label).filter(Boolean);if(!labels.length)return;const GROUPBY_TO_FILTER_PARAM={product:'product',case_type:'case_type',surgeon:'surgeon',facility:'facility',state:'state'};const filterParam=GROUPBY_TO_FILTER_PARAM[lastNlqGroupBy];if(!filterParam){toast('Cannot fetch individual cases for a "'+(lastNlqGroupBy||'this')+'" breakdown — try a Product, Case Type, Surgeon, Facility, or State grouping instead','err');return;}isOnHoldTable=false;showLoading('Fetching cases...');try{const f=lastNlqInterpretedFilters||{};const params=new URLSearchParams();params.append(filterParam,labels.join(','));['case_type','step','step_user','laterality','regulatory','surgeon','facility','state','date_from','date_to'].forEach(k=>{if(k!==filterParam&&f[k])params.append(k,f[k]);});if(f.use_created_at){params.append('use_created_at','true');}else{const NLQ_MILESTONE_MAP={total_lt:'s.ship_wrk_comp_date',seg_lt:'sd.seg_review_date',surgeon_lt:'sd.surgeon_approval_date',digital_lt:'sd.first_psp_review_date',count:'sd.first_psp_review_date',seg_completed:'sd.seg_review_date',psp_completed:'sd.first_psp_review_date',surgeon_completed:'sd.surgeon_approval_date',peer_review_completed:'sd.peer_review_date'};const mf=NLQ_MILESTONE_MAP[currentNlqMetric];if(mf)params.append('milestone_field',mf);}const res=await fetch(`${API}/analytics/cases?${params.toString()}`);const data=res.ok?await res.json():null;if(data?.cases)loadCasesIntoTable(data.cases,'NLQ Result Cases',`${data.count} cases`,false);}catch(e){toast('Error','err');}finally{hideLoading();}}
 
 function notesCell(c){
   const notes=[];
@@ -2703,7 +2703,7 @@ function clearNlqConversation(){
   document.getElementById('fetchNlqBtn').classList.remove('show');
   document.getElementById('nlqPagination').style.display='none';
   document.getElementById('queryInput').value='';
-  lastNlqRows=null;lastNlqInterpretedFilters=null;nlqAllRows=[];nlqFilteredRows=[];currentNlqMetric='';
+  lastNlqRows=null;lastNlqInterpretedFilters=null;lastNlqGroupBy=null;nlqAllRows=[];nlqFilteredRows=[];currentNlqMetric='';
   toast('Started a new conversation');
 }
 function setNlqMode(mode){
@@ -2742,7 +2742,7 @@ async function runLocalQuery(){
   rd.classList.add('show');rt.innerHTML='<i class="fa fa-spinner fa-spin" style="color:var(--accent-dark)"></i> Querying...';
   document.getElementById('queryResultMeta').textContent='';document.getElementById('queryChartWrap').style.display='none';
   document.getElementById('fetchNlqBtn').classList.remove('show');document.getElementById('nlqTableFilter').classList.remove('show');
-  document.getElementById('nlqPagination').style.display='none';lastNlqRows=null;lastNlqInterpretedFilters=null;nlqAllRows=[];nlqFilteredRows=[];currentNlqMetric='';
+  document.getElementById('nlqPagination').style.display='none';lastNlqRows=null;lastNlqInterpretedFilters=null;lastNlqGroupBy=null;nlqAllRows=[];nlqFilteredRows=[];currentNlqMetric='';
 
   const i=localParseQ(q);
   if(!i.m){rl.textContent='Result';rt.innerHTML='<span style="color:var(--text-3)">Local mode only understands simple phrasings, e.g. "avg total lead time by product" · "psp-completed cases by product" · "cases on hold". For anything more complex, switch to Claude mode.</span>';return;}
@@ -2773,7 +2773,7 @@ async function runLocalQuery(){
   }catch(e){rt.innerHTML='<span style="color:var(--red)">Error - check backend</span>';}
 }
 
-async function runClaudeQuery(){const q=document.getElementById('queryInput').value.trim();if(!q)return toast('Please enter a query','err');const rd=document.getElementById('queryResult'),rt=document.getElementById('queryResultText'),rl=document.getElementById('queryResultLabel');rd.classList.add('show');rt.innerHTML='<i class="fa fa-spinner fa-spin" style="color:var(--accent-dark)"></i> Thinking...';document.getElementById('queryResultMeta').textContent='';document.getElementById('queryChartWrap').style.display='none';document.getElementById('fetchNlqBtn').classList.remove('show');document.getElementById('nlqTableFilter').classList.remove('show');document.getElementById('nlqPagination').style.display='none';lastNlqRows=null;lastNlqInterpretedFilters=null;nlqAllRows=[];nlqFilteredRows=[];currentNlqMetric='';rl.textContent='Result';
+async function runClaudeQuery(){const q=document.getElementById('queryInput').value.trim();if(!q)return toast('Please enter a query','err');const rd=document.getElementById('queryResult'),rt=document.getElementById('queryResultText'),rl=document.getElementById('queryResultLabel');rd.classList.add('show');rt.innerHTML='<i class="fa fa-spinner fa-spin" style="color:var(--accent-dark)"></i> Thinking...';document.getElementById('queryResultMeta').textContent='';document.getElementById('queryChartWrap').style.display='none';document.getElementById('fetchNlqBtn').classList.remove('show');document.getElementById('nlqTableFilter').classList.remove('show');document.getElementById('nlqPagination').style.display='none';lastNlqRows=null;lastNlqInterpretedFilters=null;lastNlqGroupBy=null;nlqAllRows=[];nlqFilteredRows=[];currentNlqMetric='';rl.textContent='Result';
   let data=null;
   const nd=getNlqDates();
   const filters={
@@ -2814,7 +2814,7 @@ async function runClaudeQuery(){const q=document.getElementById('queryInput').va
   const isChartRows=lastStep&&lastStep.rows&&lastStep.rows.length&&Object.prototype.hasOwnProperty.call(lastStep.rows[0],'label');
   const isDerivedRows=lastStep&&lastStep.rows&&lastStep.rows.length&&!isChartRows;
 
-  if(isChartRows){lastNlqRows=lastStep.rows;lastNlqInterpretedFilters=lastStep.interpreted_as||null;nlqAllRows=[...lastStep.rows];nlqFilteredRows=[...lastStep.rows];nlqSortKey='value';nlqSortAsc=false;nlqPage=1;
+  if(isChartRows){lastNlqRows=lastStep.rows;lastNlqInterpretedFilters=lastStep.interpreted_as||null;lastNlqGroupBy=lastStep.group_by||(lastStep.interpreted_as&&lastStep.interpreted_as.group_by)||'product';nlqAllRows=[...lastStep.rows];nlqFilteredRows=[...lastStep.rows];nlqSortKey='value';nlqSortAsc=false;nlqPage=1;
     rt.innerHTML='';
     const isLt=actualMetric.includes('lt');const labels=lastStep.rows.map(r=>r.label&&r.label.length>20?r.label.slice(0,18)+'...':r.label||'Unknown');const values=lastStep.rows.map(r=>parseFloat(r.value)||0);
     document.getElementById('queryChartWrap').style.display='block';if(queryChart){queryChart.destroy();queryChart=null;}
